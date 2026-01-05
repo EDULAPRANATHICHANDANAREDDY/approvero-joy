@@ -1,71 +1,40 @@
-import { FileText, Clock, CheckCircle, XCircle } from "lucide-react";
-import Sidebar from "@/components/layout/Sidebar";
-import Header from "@/components/layout/Header";
-import StatsCard from "@/components/dashboard/StatsCard";
-import RequestsTable from "@/components/dashboard/RequestsTable";
-import PendingApprovals from "@/components/dashboard/PendingApprovals";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
+  const navigate = useNavigate();
+
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar />
-      
-      <div className="ml-64">
-        <Header />
-        
-        <main className="p-6">
-          {/* Page Header */}
-          <div className="mb-8">
-            <h1 className="font-display text-2xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Welcome back, John. Here's your workflow overview.</p>
-          </div>
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+      <div className="text-center space-y-8 max-w-md">
+        {/* Logo/Title */}
+        <h1 className="text-5xl md:text-6xl font-display font-bold tracking-tight text-foreground">
+          Authera
+        </h1>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <StatsCard
-              title="Total Requests"
-              value={156}
-              change="+12% from last month"
-              changeType="positive"
-              icon={FileText}
-              iconColor="bg-primary/10 text-primary"
-            />
-            <StatsCard
-              title="Pending Approval"
-              value={23}
-              change="5 require urgent action"
-              changeType="neutral"
-              icon={Clock}
-              iconColor="bg-warning/10 text-warning"
-            />
-            <StatsCard
-              title="Approved"
-              value={118}
-              change="+8% approval rate"
-              changeType="positive"
-              icon={CheckCircle}
-              iconColor="bg-success/10 text-success"
-            />
-            <StatsCard
-              title="Rejected"
-              value={15}
-              change="-3% from last month"
-              changeType="positive"
-              icon={XCircle}
-              iconColor="bg-destructive/10 text-destructive"
-            />
-          </div>
+        {/* Subtitle */}
+        <p className="text-lg md:text-xl text-muted-foreground font-light">
+          A modern enterprise authorization engine
+        </p>
 
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div className="xl:col-span-2">
-              <RequestsTable />
-            </div>
-            <div className="xl:col-span-1">
-              <PendingApprovals />
-            </div>
-          </div>
-        </main>
+        {/* Auth Buttons */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+          <Button
+            onClick={() => navigate("/login")}
+            variant="outline"
+            size="lg"
+            className="w-full sm:w-auto min-w-[140px] h-12 text-base font-medium"
+          >
+            Login
+          </Button>
+          <Button
+            onClick={() => navigate("/signup")}
+            size="lg"
+            className="w-full sm:w-auto min-w-[140px] h-12 text-base font-medium"
+          >
+            Sign Up
+          </Button>
+        </div>
       </div>
     </div>
   );
