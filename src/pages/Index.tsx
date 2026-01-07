@@ -1,14 +1,35 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    // Check if user is already logged in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        navigate("/dashboard");
+      }
+      setCheckingAuth(false);
+    });
+  }, [navigate]);
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6">
       <div className="text-center space-y-8 max-w-md">
         {/* Logo/Title */}
-        <h1 className="text-5xl md:text-6xl font-display font-bold tracking-tight text-foreground">
+        <h1 className="text-5xl md:text-6xl font-display font-bold tracking-tight text-primary">
           Authera
         </h1>
 
@@ -23,7 +44,7 @@ const Index = () => {
             onClick={() => navigate("/login")}
             variant="outline"
             size="lg"
-            className="w-full sm:w-auto min-w-[140px] h-12 text-base font-medium"
+            className="w-full sm:w-auto min-w-[140px] h-12 text-base font-medium border-2"
           >
             Login
           </Button>

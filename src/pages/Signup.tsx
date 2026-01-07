@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,11 +15,20 @@ const Signup = () => {
   const [password, setPassword] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  useEffect(() => {
+    // Check if user is already logged in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        navigate("/dashboard");
+      }
+    });
+  }, [navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    const redirectUrl = `${window.location.origin}/`;
+    const redirectUrl = `${window.location.origin}/dashboard`;
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -27,7 +36,7 @@ const Signup = () => {
       options: {
         emailRedirectTo: redirectUrl,
         data: {
-          full_name: name,
+          name: name,
         },
       },
     });
@@ -40,7 +49,7 @@ const Signup = () => {
     }
 
     toast.success("Account created successfully!");
-    navigate("/");
+    navigate("/dashboard");
   };
 
   return (
