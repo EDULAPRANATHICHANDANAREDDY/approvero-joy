@@ -14,7 +14,303 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activity_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          request_id: string
+          request_type: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          request_id: string
+          request_type: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          request_id?: string
+          request_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      asset_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          asset_type: string
+          assigned_at: string | null
+          category: string
+          created_at: string
+          estimated_cost: number | null
+          id: string
+          manager_comment: string | null
+          reason: string
+          return_date: string | null
+          status: string
+          title: string
+          updated_at: string
+          urgency: string | null
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          asset_type: string
+          assigned_at?: string | null
+          category: string
+          created_at?: string
+          estimated_cost?: number | null
+          id?: string
+          manager_comment?: string | null
+          reason: string
+          return_date?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          urgency?: string | null
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          asset_type?: string
+          assigned_at?: string | null
+          category?: string
+          created_at?: string
+          estimated_cost?: number | null
+          id?: string
+          manager_comment?: string | null
+          reason?: string
+          return_date?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          urgency?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      expense_claims: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          manager_comment: string | null
+          payment_reference: string | null
+          payment_status: string | null
+          policy_warning: string | null
+          receipt_url: string | null
+          status: string
+          title: string
+          updated_at: string
+          urgency: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          manager_comment?: string | null
+          payment_reference?: string | null
+          payment_status?: string | null
+          policy_warning?: string | null
+          receipt_url?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          urgency?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          manager_comment?: string | null
+          payment_reference?: string | null
+          payment_status?: string | null
+          policy_warning?: string | null
+          receipt_url?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          urgency?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      leave_balances: {
+        Row: {
+          created_at: string
+          id: string
+          leave_type: string
+          total_days: number
+          updated_at: string
+          used_days: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          leave_type: string
+          total_days?: number
+          updated_at?: string
+          used_days?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          leave_type?: string
+          total_days?: number
+          updated_at?: string
+          used_days?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      leave_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          days: number
+          end_date: string
+          id: string
+          leave_type: string
+          manager_comment: string | null
+          reason: string | null
+          start_date: string
+          status: string
+          updated_at: string
+          urgency: string | null
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          days: number
+          end_date: string
+          id?: string
+          leave_type: string
+          manager_comment?: string | null
+          reason?: string | null
+          start_date: string
+          status?: string
+          updated_at?: string
+          urgency?: string | null
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          days?: number
+          end_date?: string
+          id?: string
+          leave_type?: string
+          manager_comment?: string | null
+          reason?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+          urgency?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          request_id: string | null
+          request_type: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          request_id?: string | null
+          request_type?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          request_id?: string | null
+          request_type?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          department: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          role: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          role?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          role?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

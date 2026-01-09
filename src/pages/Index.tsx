@@ -30,12 +30,12 @@ const Index = () => {
       <div className="text-center space-y-8 max-w-md">
         {/* Logo/Title */}
         <h1 className="text-5xl md:text-6xl font-display font-bold tracking-tight text-primary">
-          Authera
+          ApproveX
         </h1>
 
         {/* Subtitle */}
         <p className="text-lg md:text-xl text-muted-foreground font-light">
-          A modern enterprise authorization engine
+          Modern approval management for your enterprise
         </p>
 
         {/* Auth Buttons */}
