@@ -9,17 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Plus, MoreHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AddUserModal, UserData } from "@/components/modals/AddUserModal";
 
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  department: string;
-  status: "active" | "inactive";
-}
-
-const initialUsers: User[] = [
+const initialUsers: UserData[] = [
   { id: 1, name: "Pranathi Reddy", email: "edulapranathi@gmail.com", role: "Manager", department: "Engineering", status: "active" },
   { id: 2, name: "Divya", email: "divyareddy@gmail.com", role: "Developer", department: "Engineering", status: "active" },
   { id: 3, name: "Maneesh Reddy", email: "maneeshreddy@gmail.com", role: "Designer", department: "Design", status: "active" },
@@ -29,7 +21,8 @@ const initialUsers: User[] = [
 const Users = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [users, setUsers] = useState<UserData[]>(initialUsers);
+  const [showAddUser, setShowAddUser] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -50,6 +43,12 @@ const Users = () => {
     );
   };
 
+  const handleUserAdded = (newUser: UserData) => {
+    setUsers(prevUsers => [newUser, ...prevUsers]);
+  };
+
+  const existingEmails = users.map(u => u.email.toLowerCase());
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -68,7 +67,7 @@ const Users = () => {
               <SidebarTrigger className="lg:hidden" />
               <h1 className="text-xl font-display font-semibold text-foreground">Users</h1>
             </div>
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={() => setShowAddUser(true)}>
               <Plus className="h-4 w-4" />
               Add User
             </Button>
@@ -125,6 +124,13 @@ const Users = () => {
           </main>
         </div>
       </div>
+      
+      <AddUserModal 
+        open={showAddUser} 
+        onOpenChange={setShowAddUser} 
+        onUserAdded={handleUserAdded}
+        existingEmails={existingEmails}
+      />
     </SidebarProvider>
   );
 };

@@ -8,18 +8,24 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Calendar, Eye, Check, X } from "lucide-react";
 import { useLeaveRequests } from "@/hooks/useLeaveRequests";
 import { useLeaveBalances } from "@/hooks/useLeaveBalances";
-import { useAuth } from "@/hooks/useAuth";
+import { useManagerAuth } from "@/hooks/useManagerAuth";
 import { NewRequestModal } from "@/components/modals/NewRequestModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { format } from "date-fns";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 const LeaveRequests = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isManager } = useManagerAuth();
   const { requests, loading, updateRequest } = useLeaveRequests();
   const { balances } = useLeaveBalances();
+  const { toast } = useToast();
   const [showNewRequest, setShowNewRequest] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<string | null>(null);
+  const [rejectComment, setRejectComment] = useState("");
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   if (authLoading) {
     return (
@@ -42,7 +48,46 @@ const LeaveRequests = () => {
     }
   };
 
+  const handleApprove = async (id: string) => {
+    if (!isManager) {
+      toast({ title: "Access Denied", description: "Only managers can approve requests", variant: "destructive" });
+      return;
+    }
+    setProcessingId(id);
+    await updateRequest(id, { status: "approved" });
+    setProcessingId(null);
+    setSelectedRequest(null);
+    toast({ title: "Success", description: "Leave request approved" });
+  };
+
+  const handleReject = async (id: string) => {
+    if (!isManager) {
+      toast({ title: "Access Denied", description: "Only managers can reject requests", variant: "destructive" });
+      return;
+    }
+    if (!rejectComment.trim()) {
+      toast({ title: "Error", description: "Rejection comment is required", variant: "destructive" });
+      return;
+    }
+    setProcessingId(id);
+    await updateRequest(id, { status: "rejected", manager_comment: rejectComment });
+    setProcessingId(null);
+    setShowRejectDialog(false);
+    setSelectedRequest(null);
+    setRejectComment("");
+    toast({ title: "Success", description: "Leave request rejected" });
+  };
+
+  const openRejectDialog = (id: string) => {
+    setSelectedRequest(id);
+    setShowRejectDialog(true);
+  };
+
   const selected = requests.find(r => r.id === selectedRequest);
+
+  // Filter to show only pending requests for the list
+  const pendingRequests = requests.filter(r => r.status === "pending");
+  const otherRequests = requests.filter(r => r.status !== "pending");
 
   return (
     <SidebarProvider>
@@ -78,49 +123,113 @@ const LeaveRequests = () => {
               ))}
             </div>
 
-            {/* Requests List */}
-            <div className="grid gap-4">
-              {loading ? (
-                <div className="text-center py-8">Loading...</div>
-              ) : requests.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No leave requests yet</div>
-              ) : (
-                requests.map((request) => (
-                  <Card key={request.id}>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 rounded-xl bg-blue-100">
-                            <Calendar className="h-5 w-5 text-blue-600" />
+            {/* Pending Requests */}
+            {pendingRequests.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold mb-4">Pending Requests</h2>
+                <div className="grid gap-4">
+                  {pendingRequests.map((request) => (
+                    <Card key={request.id}>
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 rounded-xl bg-blue-100">
+                              <Calendar className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium text-foreground">{request.leave_type}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {request.start_date} - {request.end_date} ({request.days} days)
+                              </p>
+                              <p className="text-sm text-muted-foreground mt-1">{request.reason}</p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="font-medium text-foreground">{request.leave_type}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {request.start_date} - {request.end_date} ({request.days} days)
-                            </p>
-                            <p className="text-sm text-muted-foreground mt-1">{request.reason}</p>
+                          <div className="flex items-center gap-3">
+                            {isManager && (
+                              <>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="text-red-600 border-red-200 hover:bg-red-50"
+                                  onClick={() => openRejectDialog(request.id)}
+                                  disabled={processingId === request.id}
+                                >
+                                  <X className="h-4 w-4 mr-1" /> Reject
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  className="bg-emerald-600 hover:bg-emerald-700"
+                                  onClick={() => handleApprove(request.id)}
+                                  disabled={processingId === request.id}
+                                >
+                                  <Check className="h-4 w-4 mr-1" /> Approve
+                                </Button>
+                              </>
+                            )}
+                            <Button variant="ghost" size="icon" onClick={() => setSelectedRequest(request.id)}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Badge variant="outline" className={getStatusColor(request.status)}>
+                              {request.status}
+                            </Badge>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <Button variant="ghost" size="icon" onClick={() => setSelectedRequest(request.id)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Badge variant="outline" className={getStatusColor(request.status)}>
-                            {request.status}
-                          </Badge>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Other Requests */}
+            {otherRequests.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold mb-4">Processed Requests</h2>
+                <div className="grid gap-4">
+                  {otherRequests.map((request) => (
+                    <Card key={request.id}>
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 rounded-xl bg-blue-100">
+                              <Calendar className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium text-foreground">{request.leave_type}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {request.start_date} - {request.end_date} ({request.days} days)
+                              </p>
+                              {request.manager_comment && (
+                                <p className="text-sm text-muted-foreground mt-1">Comment: {request.manager_comment}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Button variant="ghost" size="icon" onClick={() => setSelectedRequest(request.id)}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Badge variant="outline" className={getStatusColor(request.status)}>
+                              {request.status}
+                            </Badge>
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {requests.length === 0 && !loading && (
+              <div className="text-center py-8 text-muted-foreground">No leave requests yet</div>
+            )}
           </main>
         </div>
       </div>
       <NewRequestModal open={showNewRequest} onOpenChange={setShowNewRequest} />
       
-      <Dialog open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
+      {/* View Details Dialog */}
+      <Dialog open={!!selectedRequest && !showRejectDialog} onOpenChange={() => setSelectedRequest(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Leave Request Details</DialogTitle>
@@ -141,18 +250,53 @@ const LeaveRequests = () => {
                   <p>{selected.manager_comment}</p>
                 </div>
               )}
-              {selected.status === "pending" && (
+              {selected.status === "pending" && isManager && (
                 <div className="flex gap-2 pt-4">
-                  <Button variant="destructive" className="flex-1" onClick={() => { updateRequest(selected.id, { status: "rejected", manager_comment: "Rejected" }); setSelectedRequest(null); }}>
+                  <Button variant="destructive" className="flex-1" onClick={() => openRejectDialog(selected.id)}>
                     <X className="h-4 w-4 mr-2" /> Reject
                   </Button>
-                  <Button className="flex-1" onClick={() => { updateRequest(selected.id, { status: "approved" }); setSelectedRequest(null); }}>
+                  <Button className="flex-1" onClick={() => handleApprove(selected.id)}>
                     <Check className="h-4 w-4 mr-2" /> Approve
                   </Button>
                 </div>
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Dialog with Comment */}
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reject Leave Request</DialogTitle>
+            <DialogDescription>Please provide a reason for rejection</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="comment">Rejection Comment *</Label>
+              <Textarea
+                id="comment"
+                value={rejectComment}
+                onChange={(e) => setRejectComment(e.target.value)}
+                placeholder="Enter reason for rejection..."
+                rows={4}
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => { setShowRejectDialog(false); setRejectComment(""); }}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                className="flex-1" 
+                onClick={() => selectedRequest && handleReject(selectedRequest)}
+                disabled={!rejectComment.trim() || processingId !== null}
+              >
+                Reject Request
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </SidebarProvider>
