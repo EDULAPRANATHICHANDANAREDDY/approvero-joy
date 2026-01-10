@@ -81,8 +81,8 @@ const ExpenseClaims = () => {
                           <div>
                             <div className="flex items-center gap-2">
                               <h3 className="font-medium text-foreground">{claim.title}</h3>
-                              {claim.policy_warning && (
-                                <AlertTriangle className="h-4 w-4 text-amber-500" title={claim.policy_warning} />
+                            {claim.policy_warning && (
+                                <AlertTriangle className="h-4 w-4 text-amber-500" aria-label={claim.policy_warning} />
                               )}
                             </div>
                             <p className="text-sm text-muted-foreground">
