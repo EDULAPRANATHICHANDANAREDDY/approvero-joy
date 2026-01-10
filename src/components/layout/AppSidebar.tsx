@@ -30,13 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
-
-const mainItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Leave Requests", url: "/leave-requests", icon: Calendar, badge: 3 },
-  { title: "Expense Claims", url: "/expense-claims", icon: DollarSign, badge: 5 },
-  { title: "Asset Requests", url: "/asset-requests", icon: Package, badge: 2 },
-];
+import { usePendingCounts } from "@/hooks/usePendingCounts";
 
 const adminItems = [
   { title: "Users", url: "/users", icon: Users },
@@ -50,12 +44,20 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const [user, setUser] = useState<User | null>(null);
+  const { counts } = usePendingCounts();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
   }, []);
+
+  const mainItems = [
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, badge: 0 },
+    { title: "Leave Requests", url: "/leave-requests", icon: Calendar, badge: counts.leave },
+    { title: "Expense Claims", url: "/expense-claims", icon: DollarSign, badge: counts.expense },
+    { title: "Asset Requests", url: "/asset-requests", icon: Package, badge: counts.asset },
+  ];
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -73,6 +75,7 @@ export function AppSidebar() {
   const isActive = (path: string) => location.pathname === path;
   const userName = user?.user_metadata?.name || user?.email?.split("@")[0] || "User";
   const userInitials = userName.substring(0, 2).toUpperCase();
+  const isManager = user?.email === "edulapranathi@gmail.com";
 
   return (
     <Sidebar className="border-r-0">
@@ -113,7 +116,7 @@ export function AppSidebar() {
                     {!collapsed && (
                       <>
                         <span className="flex-1">{item.title}</span>
-                        {item.badge && (
+                        {item.badge > 0 && (
                           <Badge 
                             variant="secondary" 
                             className={`text-xs ${
@@ -174,7 +177,7 @@ export function AppSidebar() {
                   {userName}
                 </p>
                 <p className="text-xs text-sidebar-foreground/60 truncate">
-                  Manager
+                  {isManager ? "Manager" : "Employee"}
                 </p>
               </div>
               <Button

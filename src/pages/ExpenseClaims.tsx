@@ -7,16 +7,23 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, DollarSign, AlertTriangle, Eye, Check, X } from "lucide-react";
 import { useExpenseClaims } from "@/hooks/useExpenseClaims";
-import { useAuth } from "@/hooks/useAuth";
+import { useManagerAuth } from "@/hooks/useManagerAuth";
 import { NewRequestModal } from "@/components/modals/NewRequestModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 const ExpenseClaims = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isManager } = useManagerAuth();
   const { claims, loading, updateClaim } = useExpenseClaims();
+  const { toast } = useToast();
   const [showNewRequest, setShowNewRequest] = useState(false);
   const [selectedClaim, setSelectedClaim] = useState<string | null>(null);
+  const [rejectComment, setRejectComment] = useState("");
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   if (authLoading) {
     return (
@@ -46,7 +53,44 @@ const ExpenseClaims = () => {
     }
   };
 
+  const handleApprove = async (id: string) => {
+    if (!isManager) {
+      toast({ title: "Access Denied", description: "Only managers can approve claims", variant: "destructive" });
+      return;
+    }
+    setProcessingId(id);
+    await updateClaim(id, { status: "approved" });
+    setProcessingId(null);
+    setSelectedClaim(null);
+    toast({ title: "Success", description: "Expense claim approved" });
+  };
+
+  const handleReject = async (id: string) => {
+    if (!isManager) {
+      toast({ title: "Access Denied", description: "Only managers can reject claims", variant: "destructive" });
+      return;
+    }
+    if (!rejectComment.trim()) {
+      toast({ title: "Error", description: "Rejection comment is required", variant: "destructive" });
+      return;
+    }
+    setProcessingId(id);
+    await updateClaim(id, { status: "rejected", manager_comment: rejectComment });
+    setProcessingId(null);
+    setShowRejectDialog(false);
+    setSelectedClaim(null);
+    setRejectComment("");
+    toast({ title: "Success", description: "Expense claim rejected" });
+  };
+
+  const openRejectDialog = (id: string) => {
+    setSelectedClaim(id);
+    setShowRejectDialog(true);
+  };
+
   const selected = claims.find(c => c.id === selectedClaim);
+  const pendingClaims = claims.filter(c => c.status === "pending");
+  const otherClaims = claims.filter(c => c.status !== "pending");
 
   return (
     <SidebarProvider>
@@ -64,65 +108,130 @@ const ExpenseClaims = () => {
             </Button>
           </header>
           <main className="flex-1 p-6">
-            <div className="grid gap-4">
-              {loading ? (
-                <div className="text-center py-8">Loading...</div>
-              ) : claims.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No expense claims yet</div>
-              ) : (
-                claims.map((claim) => (
-                  <Card key={claim.id}>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 rounded-xl bg-emerald-100">
-                            <DollarSign className="h-5 w-5 text-emerald-600" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-medium text-foreground">{claim.title}</h3>
-                            {claim.policy_warning && (
-                                <AlertTriangle className="h-4 w-4 text-amber-500" aria-label={claim.policy_warning} />
+            {/* Pending Claims */}
+            {pendingClaims.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold mb-4">Pending Claims</h2>
+                <div className="grid gap-4">
+                  {pendingClaims.map((claim) => (
+                    <Card key={claim.id}>
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 rounded-xl bg-emerald-100">
+                              <DollarSign className="h-5 w-5 text-emerald-600" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-medium text-foreground">{claim.title}</h3>
+                                {claim.policy_warning && (
+                                  <AlertTriangle className="h-4 w-4 text-amber-500" aria-label={claim.policy_warning} />
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {claim.category} • {new Date(claim.created_at).toLocaleDateString()}
+                              </p>
+                              {claim.policy_warning && (
+                                <p className="text-xs text-amber-600 mt-1">{claim.policy_warning}</p>
                               )}
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                              {claim.category} • {new Date(claim.created_at).toLocaleDateString()}
-                            </p>
-                            {claim.policy_warning && (
-                              <p className="text-xs text-amber-600 mt-1">{claim.policy_warning}</p>
-                            )}
                           </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <span className="text-lg font-semibold text-foreground">
-                            ${Number(claim.amount).toFixed(2)}
-                          </span>
-                          <Button variant="ghost" size="icon" onClick={() => setSelectedClaim(claim.id)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-4">
+                            <span className="text-lg font-semibold text-foreground">
+                              ${Number(claim.amount).toFixed(2)}
+                            </span>
+                            {isManager && (
+                              <>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="text-red-600 border-red-200 hover:bg-red-50"
+                                  onClick={() => openRejectDialog(claim.id)}
+                                  disabled={processingId === claim.id}
+                                >
+                                  <X className="h-4 w-4 mr-1" /> Reject
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  className="bg-emerald-600 hover:bg-emerald-700"
+                                  onClick={() => handleApprove(claim.id)}
+                                  disabled={processingId === claim.id}
+                                >
+                                  <Check className="h-4 w-4 mr-1" /> Approve
+                                </Button>
+                              </>
+                            )}
+                            <Button variant="ghost" size="icon" onClick={() => setSelectedClaim(claim.id)}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
                             <Badge variant="outline" className={getStatusColor(claim.status)}>
                               {claim.status}
                             </Badge>
-                            {claim.status === "approved" && (
-                              <Badge variant="outline" className={getPaymentStatusColor(claim.payment_status)}>
-                                {claim.payment_status}
-                              </Badge>
-                            )}
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Processed Claims */}
+            {otherClaims.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold mb-4">Processed Claims</h2>
+                <div className="grid gap-4">
+                  {otherClaims.map((claim) => (
+                    <Card key={claim.id}>
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 rounded-xl bg-emerald-100">
+                              <DollarSign className="h-5 w-5 text-emerald-600" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium text-foreground">{claim.title}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {claim.category} • {new Date(claim.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className="text-lg font-semibold text-foreground">
+                              ${Number(claim.amount).toFixed(2)}
+                            </span>
+                            <Button variant="ghost" size="icon" onClick={() => setSelectedClaim(claim.id)}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <div className="flex flex-col gap-1">
+                              <Badge variant="outline" className={getStatusColor(claim.status)}>
+                                {claim.status}
+                              </Badge>
+                              {claim.status === "approved" && (
+                                <Badge variant="outline" className={getPaymentStatusColor(claim.payment_status)}>
+                                  {claim.payment_status}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {claims.length === 0 && !loading && (
+              <div className="text-center py-8 text-muted-foreground">No expense claims yet</div>
+            )}
           </main>
         </div>
       </div>
       <NewRequestModal open={showNewRequest} onOpenChange={setShowNewRequest} />
 
-      <Dialog open={!!selectedClaim} onOpenChange={() => setSelectedClaim(null)}>
+      {/* View Details Dialog */}
+      <Dialog open={!!selectedClaim && !showRejectDialog} onOpenChange={() => setSelectedClaim(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Expense Claim Details</DialogTitle>
@@ -142,18 +251,59 @@ const ExpenseClaims = () => {
                   <p className="text-sm text-amber-700"><AlertTriangle className="h-4 w-4 inline mr-1" />{selected.policy_warning}</p>
                 </div>
               )}
-              {selected.status === "pending" && (
+              {selected.manager_comment && (
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-sm text-muted-foreground">Manager Comment</p>
+                  <p>{selected.manager_comment}</p>
+                </div>
+              )}
+              {selected.status === "pending" && isManager && (
                 <div className="flex gap-2 pt-4">
-                  <Button variant="destructive" className="flex-1" onClick={() => { updateClaim(selected.id, { status: "rejected", manager_comment: "Rejected" }); setSelectedClaim(null); }}>
+                  <Button variant="destructive" className="flex-1" onClick={() => openRejectDialog(selected.id)}>
                     <X className="h-4 w-4 mr-2" /> Reject
                   </Button>
-                  <Button className="flex-1" onClick={() => { updateClaim(selected.id, { status: "approved" }); setSelectedClaim(null); }}>
+                  <Button className="flex-1" onClick={() => handleApprove(selected.id)}>
                     <Check className="h-4 w-4 mr-2" /> Approve
                   </Button>
                 </div>
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Dialog with Comment */}
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reject Expense Claim</DialogTitle>
+            <DialogDescription>Please provide a reason for rejection</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="comment">Rejection Comment *</Label>
+              <Textarea
+                id="comment"
+                value={rejectComment}
+                onChange={(e) => setRejectComment(e.target.value)}
+                placeholder="Enter reason for rejection..."
+                rows={4}
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => { setShowRejectDialog(false); setRejectComment(""); }}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                className="flex-1" 
+                onClick={() => selectedClaim && handleReject(selectedClaim)}
+                disabled={!rejectComment.trim() || processingId !== null}
+              >
+                Reject Claim
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </SidebarProvider>
