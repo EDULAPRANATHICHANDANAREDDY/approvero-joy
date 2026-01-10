@@ -27,7 +27,7 @@ export function NewRequestModal({ open, onOpenChange }: NewRequestModalProps) {
   const { createRequest: createLeave } = useLeaveRequests();
   const { createClaim } = useExpenseClaims();
   const { createRequest: createAsset } = useAssetRequests();
-  const { hasEnoughBalance, getBalance } = useLeaveBalances();
+  const { hasEnoughBalance, getBalance, updateUsedDays } = useLeaveBalances();
 
   // Leave form state
   const [leaveType, setLeaveType] = useState("Annual Leave");
@@ -85,7 +85,7 @@ export function NewRequestModal({ open, onOpenChange }: NewRequestModalProps) {
           setIsSubmitting(false);
           return;
         }
-        await createLeave({
+        const result = await createLeave({
           leave_type: leaveType,
           start_date: startDate,
           end_date: endDate,
@@ -93,6 +93,10 @@ export function NewRequestModal({ open, onOpenChange }: NewRequestModalProps) {
           reason: leaveReason,
           urgency: "normal"
         });
+        if (result) {
+          // Update used days after successful leave request
+          await updateUsedDays(leaveType, days);
+        }
         navigate("/leave-requests");
       } else if (requestType === "expense") {
         await createClaim({

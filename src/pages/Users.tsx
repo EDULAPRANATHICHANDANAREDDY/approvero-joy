@@ -8,17 +8,28 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Plus, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-const users = [
-  { id: 1, name: "Sarah Chen", email: "sarah.chen@company.com", role: "Manager", department: "Engineering", status: "active" },
-  { id: 2, name: "Mike Johnson", email: "mike.johnson@company.com", role: "Developer", department: "Engineering", status: "active" },
-  { id: 3, name: "Emily Davis", email: "emily.davis@company.com", role: "Designer", department: "Design", status: "active" },
-  { id: 4, name: "John Smith", email: "john.smith@company.com", role: "Admin", department: "Operations", status: "inactive" },
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  department: string;
+  status: "active" | "inactive";
+}
+
+const initialUsers: User[] = [
+  { id: 1, name: "Pranathi Reddy", email: "edulapranathi@gmail.com", role: "Manager", department: "Engineering", status: "active" },
+  { id: 2, name: "Divya", email: "divyareddy@gmail.com", role: "Developer", department: "Engineering", status: "active" },
+  { id: 3, name: "Maneesh Reddy", email: "maneeshreddy@gmail.com", role: "Designer", department: "Design", status: "active" },
+  { id: 4, name: "Krishna", email: "krishna@gmail.com", role: "Admin", department: "Operations", status: "inactive" },
 ];
 
 const Users = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState<User[]>(initialUsers);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -28,6 +39,16 @@ const Users = () => {
       setLoading(false);
     });
   }, [navigate]);
+
+  const toggleUserStatus = (userId: number) => {
+    setUsers(prevUsers =>
+      prevUsers.map(user =>
+        user.id === userId
+          ? { ...user, status: user.status === "active" ? "inactive" : "active" }
+          : user
+      )
+    );
+  };
 
   if (loading) {
     return (
@@ -74,12 +95,27 @@ const Users = () => {
                           <p className="text-sm font-medium text-foreground">{user.role}</p>
                           <p className="text-xs text-muted-foreground">{user.department}</p>
                         </div>
-                        <Badge variant={user.status === "active" ? "default" : "secondary"}>
+                        <Badge 
+                          variant={user.status === "active" ? "default" : "secondary"}
+                          className={`cursor-pointer ${user.status === "active" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-gray-400 hover:bg-gray-500"}`}
+                          onClick={() => toggleUserStatus(user.id)}
+                        >
                           {user.status}
                         </Badge>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => toggleUserStatus(user.id)}>
+                              {user.status === "active" ? "Set Inactive" : "Set Active"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>Edit User</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive">Delete User</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   </CardContent>
