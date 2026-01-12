@@ -2,7 +2,6 @@ import { FileText, Check, X, Eye, AlertTriangle } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -11,6 +10,7 @@ import { useState, useMemo } from "react";
 import { useLeaveRequests } from "@/hooks/useLeaveRequests";
 import { useExpenseClaims } from "@/hooks/useExpenseClaims";
 import { useAssetRequests } from "@/hooks/useAssetRequests";
+import { useManagerAuth } from "@/hooks/useManagerAuth";
 import { formatDistanceToNow, differenceInDays } from "date-fns";
 
 interface PendingItem {
@@ -26,6 +26,7 @@ interface PendingItem {
 
 export function PendingApprovalsCard() {
   const { toast } = useToast();
+  const { isManager } = useManagerAuth();
   const { requests: leaveRequests, updateRequest: updateLeave } = useLeaveRequests();
   const { claims: expenseClaims, updateClaim: updateExpense } = useExpenseClaims();
   const { requests: assetRequests, updateRequest: updateAsset } = useAssetRequests();
@@ -183,21 +184,25 @@ export function PendingApprovalsCard() {
                         <Button variant="ghost" size="icon" className="h-8 w-8">
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => handleReject(item)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleApprove(item)}
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
+                        {isManager && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => handleReject(item)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleApprove(item)}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

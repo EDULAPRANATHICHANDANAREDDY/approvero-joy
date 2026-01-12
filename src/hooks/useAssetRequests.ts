@@ -87,11 +87,23 @@ export function useAssetRequests() {
 
   const updateRequest = async (id: string, updates: Partial<AssetRequest>) => {
     const { data: { user } } = await supabase.auth.getUser();
+    
+    // Check manager permission
+    if ((updates.status === "approved" || updates.status === "rejected") && user?.email !== "edulapranathi@gmail.com") {
+      toast({ title: "Access Denied", description: "Only the manager can approve or reject requests", variant: "destructive" });
+      return false;
+    }
+
     const updateData: Record<string, unknown> = { ...updates };
     
     if (updates.status === "approved" || updates.status === "rejected") {
       updateData.approved_by = user?.id;
       updateData.approved_at = new Date().toISOString();
+    }
+
+    // Optimistic update - immediately remove from local state if approving/rejecting
+    if (updates.status === "approved" || updates.status === "rejected") {
+      setRequests(prev => prev.filter(r => r.id !== id));
     }
 
     const { error } = await supabase
@@ -101,6 +113,8 @@ export function useAssetRequests() {
 
     if (error) {
       toast({ title: "Error", description: "Failed to update request", variant: "destructive" });
+      // Revert optimistic update on error
+      fetchRequests();
       return false;
     }
 
