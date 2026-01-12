@@ -19,6 +19,32 @@ export interface LeaveRequest {
   updated_at: string;
 }
 
+const sendApprovalEmail = async (
+  recipientEmail: string,
+  recipientName: string,
+  requestId: string,
+  status: "approved" | "rejected",
+  managerEmail: string,
+  requestDetails: { startDate: string; endDate: string; days: number }
+) => {
+  try {
+    const response = await supabase.functions.invoke("send-approval-email", {
+      body: {
+        recipientEmail,
+        recipientName,
+        requestType: "leave",
+        requestId,
+        status,
+        managerEmail,
+        requestDetails,
+      },
+    });
+    console.log("Email notification sent:", response);
+  } catch (error) {
+    console.error("Failed to send email notification:", error);
+  }
+};
+
 export function useLeaveRequests() {
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +106,9 @@ export function useLeaveRequests() {
       return false;
     }
 
+    // Get the request details for email
+    const requestToUpdate = requests.find(r => r.id === id);
+
     const updateData: Record<string, unknown> = { ...updates };
     
     if (updates.status === "approved" || updates.status === "rejected") {
@@ -104,8 +133,31 @@ export function useLeaveRequests() {
       return false;
     }
 
-    if (user && updates.status) {
+    if (user && updates.status && requestToUpdate) {
       await logActivity(user.id, updates.status, "leave", id);
+      
+      // Send email notification
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("email, full_name")
+        .eq("user_id", requestToUpdate.user_id)
+        .single();
+
+      if (profile?.email) {
+        await sendApprovalEmail(
+          profile.email,
+          profile.full_name || "Employee",
+          id,
+          updates.status as "approved" | "rejected",
+          user.email || "Manager",
+          {
+            startDate: requestToUpdate.start_date,
+            endDate: requestToUpdate.end_date,
+            days: requestToUpdate.days,
+          }
+        );
+        toast({ title: "Email Sent", description: `Notification sent to ${profile.email}` });
+      }
     }
     return true;
   };

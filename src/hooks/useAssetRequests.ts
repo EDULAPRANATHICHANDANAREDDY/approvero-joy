@@ -23,6 +23,32 @@ export interface AssetRequest {
 
 const AUTO_APPROVE_LIMIT = 100;
 
+const sendApprovalEmail = async (
+  recipientEmail: string,
+  recipientName: string,
+  requestId: string,
+  status: "approved" | "rejected",
+  managerEmail: string,
+  requestDetails: { title: string; category: string; amount?: number }
+) => {
+  try {
+    const response = await supabase.functions.invoke("send-approval-email", {
+      body: {
+        recipientEmail,
+        recipientName,
+        requestType: "asset",
+        requestId,
+        status,
+        managerEmail,
+        requestDetails,
+      },
+    });
+    console.log("Email notification sent:", response);
+  } catch (error) {
+    console.error("Failed to send email notification:", error);
+  }
+};
+
 export function useAssetRequests() {
   const [requests, setRequests] = useState<AssetRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,6 +120,9 @@ export function useAssetRequests() {
       return false;
     }
 
+    // Get the request details for email
+    const requestToUpdate = requests.find(r => r.id === id);
+
     const updateData: Record<string, unknown> = { ...updates };
     
     if (updates.status === "approved" || updates.status === "rejected") {
@@ -118,8 +147,31 @@ export function useAssetRequests() {
       return false;
     }
 
-    if (user && updates.status) {
+    if (user && updates.status && requestToUpdate) {
       await logActivity(user.id, updates.status, "asset", id);
+      
+      // Send email notification
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("email, full_name")
+        .eq("user_id", requestToUpdate.user_id)
+        .single();
+
+      if (profile?.email) {
+        await sendApprovalEmail(
+          profile.email,
+          profile.full_name || "Employee",
+          id,
+          updates.status as "approved" | "rejected",
+          user.email || "Manager",
+          {
+            title: requestToUpdate.title,
+            category: requestToUpdate.category,
+            amount: requestToUpdate.estimated_cost || undefined,
+          }
+        );
+        toast({ title: "Email Sent", description: `Notification sent to ${profile.email}` });
+      }
     }
     return true;
   };

@@ -29,6 +29,32 @@ const EXPENSE_LIMITS: Record<string, number> = {
   "Office Supplies": 100
 };
 
+const sendApprovalEmail = async (
+  recipientEmail: string,
+  recipientName: string,
+  requestId: string,
+  status: "approved" | "rejected",
+  managerEmail: string,
+  requestDetails: { title: string; amount: number; category: string }
+) => {
+  try {
+    const response = await supabase.functions.invoke("send-approval-email", {
+      body: {
+        recipientEmail,
+        recipientName,
+        requestType: "expense",
+        requestId,
+        status,
+        managerEmail,
+        requestDetails,
+      },
+    });
+    console.log("Email notification sent:", response);
+  } catch (error) {
+    console.error("Failed to send email notification:", error);
+  }
+};
+
 export function useExpenseClaims() {
   const [claims, setClaims] = useState<ExpenseClaim[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,6 +125,9 @@ export function useExpenseClaims() {
       return false;
     }
 
+    // Get the claim details for email
+    const claimToUpdate = claims.find(c => c.id === id);
+
     const updateData: Record<string, unknown> = { ...updates };
     
     if (updates.status === "approved" || updates.status === "rejected") {
@@ -123,8 +152,31 @@ export function useExpenseClaims() {
       return false;
     }
 
-    if (user && updates.status) {
+    if (user && updates.status && claimToUpdate) {
       await logActivity(user.id, updates.status, "expense", id);
+      
+      // Send email notification
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("email, full_name")
+        .eq("user_id", claimToUpdate.user_id)
+        .single();
+
+      if (profile?.email) {
+        await sendApprovalEmail(
+          profile.email,
+          profile.full_name || "Employee",
+          id,
+          updates.status as "approved" | "rejected",
+          user.email || "Manager",
+          {
+            title: claimToUpdate.title,
+            amount: claimToUpdate.amount,
+            category: claimToUpdate.category,
+          }
+        );
+        toast({ title: "Email Sent", description: `Notification sent to ${profile.email}` });
+      }
     }
     return true;
   };
