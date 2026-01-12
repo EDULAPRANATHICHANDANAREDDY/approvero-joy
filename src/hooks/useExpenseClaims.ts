@@ -92,11 +92,23 @@ export function useExpenseClaims() {
 
   const updateClaim = async (id: string, updates: Partial<ExpenseClaim>) => {
     const { data: { user } } = await supabase.auth.getUser();
+    
+    // Check manager permission
+    if ((updates.status === "approved" || updates.status === "rejected") && user?.email !== "edulapranathi@gmail.com") {
+      toast({ title: "Access Denied", description: "Only the manager can approve or reject requests", variant: "destructive" });
+      return false;
+    }
+
     const updateData: Record<string, unknown> = { ...updates };
     
     if (updates.status === "approved" || updates.status === "rejected") {
       updateData.approved_by = user?.id;
       updateData.approved_at = new Date().toISOString();
+    }
+
+    // Optimistic update - immediately remove from local state if approving/rejecting
+    if (updates.status === "approved" || updates.status === "rejected") {
+      setClaims(prev => prev.filter(c => c.id !== id));
     }
 
     const { error } = await supabase
@@ -106,6 +118,8 @@ export function useExpenseClaims() {
 
     if (error) {
       toast({ title: "Error", description: "Failed to update claim", variant: "destructive" });
+      // Revert optimistic update on error
+      fetchClaims();
       return false;
     }
 
