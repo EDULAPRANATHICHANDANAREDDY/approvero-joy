@@ -27,7 +27,7 @@ export function NewRequestModal({ open, onOpenChange }: NewRequestModalProps) {
   const { createRequest: createLeave } = useLeaveRequests();
   const { createClaim } = useExpenseClaims();
   const { createRequest: createAsset } = useAssetRequests();
-  const { hasEnoughBalance, getBalance, updateUsedDays } = useLeaveBalances();
+  const { hasEnoughBalance, getBalance, updateUsedDays, monthlyUsed, yearlyUsed, monthlyLimit, yearlyLimit, getMonthlyRemaining, getYearlyRemaining, canRequestLeave, isPersonalLeave } = useLeaveBalances();
 
   // Leave form state
   const [leaveType, setLeaveType] = useState("Annual Leave");
@@ -127,7 +127,12 @@ export function NewRequestModal({ open, onOpenChange }: NewRequestModalProps) {
 
   const days = calculateDays();
   const balance = getBalance(leaveType);
+  const monthlyRemaining = getMonthlyRemaining();
+  const yearlyRemaining = getYearlyRemaining();
   const insufficientBalance = days > 0 && !hasEnoughBalance(leaveType, days);
+  const monthlyExceeded = days > monthlyRemaining;
+  const yearlyExceeded = days > yearlyRemaining;
+  const isUnpaid = isPersonalLeave(leaveType);
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) resetForms(); onOpenChange(o); }}>
@@ -173,20 +178,41 @@ export function NewRequestModal({ open, onOpenChange }: NewRequestModalProps) {
           </div>
         ) : requestType === "leave" ? (
           <div className="space-y-4 py-4">
-            <div className="p-3 rounded-lg bg-muted text-sm">
-              <span className="font-medium">{leaveType} Balance:</span> {balance} days remaining
+            {/* Leave Balance Summary */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
+                <p className="text-xs text-blue-600 font-medium">Monthly Balance</p>
+                <p className="text-lg font-bold text-blue-700">{monthlyRemaining} / {monthlyLimit} days</p>
+              </div>
+              <div className="p-3 rounded-lg bg-purple-50 border border-purple-100">
+                <p className="text-xs text-purple-600 font-medium">Yearly Balance</p>
+                <p className="text-lg font-bold text-purple-700">{yearlyRemaining} / {yearlyLimit} days</p>
+              </div>
             </div>
+            
             <div className="space-y-2">
               <Label>Leave Type</Label>
               <Select value={leaveType} onValueChange={setLeaveType}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Annual Leave">Annual Leave</SelectItem>
-                  <SelectItem value="Sick Leave">Sick Leave</SelectItem>
-                  <SelectItem value="Personal Leave">Personal Leave</SelectItem>
+                  <SelectItem value="Annual Leave">Annual Leave (Half-Paid)</SelectItem>
+                  <SelectItem value="Sick Leave">Sick Leave (Half-Paid)</SelectItem>
+                  <SelectItem value="Personal Leave">Personal Leave (Unpaid)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            
+            {isUnpaid && (
+              <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-sm">
+                <p className="font-medium text-red-700">⚠️ Personal Leave is Unpaid</p>
+                <p className="text-red-600 text-xs">No salary will be provided for these days</p>
+              </div>
+            )}
+            
+            <div className="p-3 rounded-lg bg-muted text-sm">
+              <span className="font-medium">{leaveType} Type Balance:</span> {balance} days remaining
+            </div>
+            
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Start Date</Label>
@@ -197,21 +223,32 @@ export function NewRequestModal({ open, onOpenChange }: NewRequestModalProps) {
                 <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
               </div>
             </div>
+            
             {days > 0 && (
               <div className={`p-3 rounded-lg text-sm ${insufficientBalance ? 'bg-destructive/10 text-destructive' : 'bg-muted'}`}>
-                {insufficientBalance 
-                  ? `Insufficient balance! You need ${days} days but only have ${balance} remaining.`
-                  : `Duration: ${days} day${days > 1 ? 's' : ''}`
-                }
+                {monthlyExceeded ? (
+                  <p>❌ Monthly limit exceeded! You need {days} days but only have {monthlyRemaining} remaining this month.</p>
+                ) : yearlyExceeded ? (
+                  <p>❌ Yearly limit exceeded! You need {days} days but only have {yearlyRemaining} remaining this year.</p>
+                ) : insufficientBalance ? (
+                  <p>❌ Insufficient {leaveType} balance! You need {days} days but only have {balance} remaining.</p>
+                ) : (
+                  <p>✓ Duration: {days} day{days > 1 ? 's' : ''} {isUnpaid ? '(Unpaid)' : '(Half-Paid)'}</p>
+                )}
               </div>
             )}
+            
             <div className="space-y-2">
               <Label>Reason</Label>
               <Textarea value={leaveReason} onChange={(e) => setLeaveReason(e.target.value)} placeholder="Describe the reason for your leave..." />
             </div>
             <div className="flex gap-2 pt-4">
               <Button variant="outline" onClick={() => setRequestType(null)} className="flex-1">Back</Button>
-              <Button onClick={handleSubmit} disabled={isSubmitting || !startDate || !endDate || insufficientBalance} className="flex-1">
+              <Button 
+                onClick={handleSubmit} 
+                disabled={isSubmitting || !startDate || !endDate || insufficientBalance || monthlyExceeded || yearlyExceeded} 
+                className="flex-1"
+              >
                 {isSubmitting ? "Submitting..." : "Submit Request"}
               </Button>
             </div>

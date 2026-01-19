@@ -7,7 +7,8 @@ import {
   Users, 
   Settings,
   LogOut,
-  ChevronLeft
+  ChevronLeft,
+  Shield
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -52,8 +53,11 @@ export function AppSidebar() {
     });
   }, []);
 
+  const isManager = user?.email === "edulapranathi@gmail.com";
+
   const mainItems = [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, badge: 0 },
+    ...(isManager ? [{ title: "Manager Dashboard", url: "/manager-dashboard", icon: Shield, badge: 0 }] : []),
     { title: "Leave Requests", url: "/leave-requests", icon: Calendar, badge: counts.leave },
     { title: "Expense Claims", url: "/expense-claims", icon: DollarSign, badge: counts.expense },
     { title: "Asset Requests", url: "/asset-requests", icon: Package, badge: counts.asset },
@@ -75,7 +79,6 @@ export function AppSidebar() {
   const isActive = (path: string) => location.pathname === path;
   const userName = user?.user_metadata?.name || user?.email?.split("@")[0] || "User";
   const userInitials = userName.substring(0, 2).toUpperCase();
-  const isManager = user?.email === "edulapranathi@gmail.com";
 
   return (
     <Sidebar className="border-r-0">
