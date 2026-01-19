@@ -101,6 +101,42 @@ export type Database = {
         }
         Relationships: []
       }
+      employees: {
+        Row: {
+          created_at: string
+          department: string | null
+          email: string
+          full_name: string
+          id: string
+          is_active: boolean | null
+          position: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          email: string
+          full_name: string
+          id?: string
+          is_active?: boolean | null
+          position?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          is_active?: boolean | null
+          position?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       expense_claims: {
         Row: {
           amount: number
@@ -165,29 +201,47 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          last_month_reset: string | null
+          last_year_reset: string | null
           leave_type: string
+          monthly_limit: number
+          monthly_used_days: number
           total_days: number
           updated_at: string
           used_days: number
           user_id: string
+          yearly_limit: number
+          yearly_used_days: number
         }
         Insert: {
           created_at?: string
           id?: string
+          last_month_reset?: string | null
+          last_year_reset?: string | null
           leave_type: string
+          monthly_limit?: number
+          monthly_used_days?: number
           total_days?: number
           updated_at?: string
           used_days?: number
           user_id: string
+          yearly_limit?: number
+          yearly_used_days?: number
         }
         Update: {
           created_at?: string
           id?: string
+          last_month_reset?: string | null
+          last_year_reset?: string | null
           leave_type?: string
+          monthly_limit?: number
+          monthly_used_days?: number
           total_days?: number
           updated_at?: string
           used_days?: number
           user_id?: string
+          yearly_limit?: number
+          yearly_used_days?: number
         }
         Relationships: []
       }
@@ -316,7 +370,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      reset_monthly_leave_balances: { Args: never; Returns: undefined }
+      reset_yearly_leave_balances: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
