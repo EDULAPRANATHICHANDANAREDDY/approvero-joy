@@ -365,6 +365,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_sessions: {
+        Row: {
+          email: string
+          id: string
+          is_active: boolean
+          last_activity_at: string
+          logged_in_at: string
+          session_date: string
+          user_id: string
+        }
+        Insert: {
+          email: string
+          id?: string
+          is_active?: boolean
+          last_activity_at?: string
+          logged_in_at?: string
+          session_date?: string
+          user_id: string
+        }
+        Update: {
+          email?: string
+          id?: string
+          is_active?: boolean
+          last_activity_at?: string
+          logged_in_at?: string
+          session_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

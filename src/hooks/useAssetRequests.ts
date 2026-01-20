@@ -49,16 +49,31 @@ const sendApprovalEmail = async (
   }
 };
 
+const MANAGER_EMAIL = "edulapranathi@gmail.com";
+
 export function useAssetRequests() {
   const [requests, setRequests] = useState<AssetRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   const fetchRequests = async () => {
-    const { data, error } = await supabase
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    // Manager sees all requests, regular users see only their own
+    let query = supabase
       .from("asset_requests")
       .select("*")
       .order("created_at", { ascending: false });
+
+    if (user.email !== MANAGER_EMAIL) {
+      query = query.eq("user_id", user.id);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       toast({ title: "Error", description: "Failed to fetch asset requests", variant: "destructive" });
