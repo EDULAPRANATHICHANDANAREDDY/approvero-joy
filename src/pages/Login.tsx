@@ -23,11 +23,44 @@ const Login = () => {
     });
   }, [navigate]);
 
+  const trackSession = async (userId: string, email: string) => {
+    const today = new Date().toISOString().split("T")[0];
+    
+    // Check if session exists for today
+    const { data: existingSession } = await supabase
+      .from("user_sessions")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("session_date", today)
+      .single();
+
+    if (!existingSession) {
+      // Create new session for today
+      await supabase
+        .from("user_sessions")
+        .insert({
+          user_id: userId,
+          email: email,
+          session_date: today,
+          is_active: true,
+        });
+    } else {
+      // Update existing session
+      await supabase
+        .from("user_sessions")
+        .update({ 
+          last_activity_at: new Date().toISOString(),
+          is_active: true 
+        })
+        .eq("id", existingSession.id);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -37,6 +70,11 @@ const Login = () => {
     if (error) {
       toast.error(error.message);
       return;
+    }
+
+    // Track user session on login
+    if (data.user) {
+      await trackSession(data.user.id, data.user.email || email);
     }
 
     toast.success("Logged in successfully!");

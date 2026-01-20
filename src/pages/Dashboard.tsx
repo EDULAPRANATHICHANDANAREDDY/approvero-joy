@@ -8,11 +8,15 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { PendingApprovalsCard } from "@/components/dashboard/PendingApprovalsCard";
 import { QuickActions } from "@/components/dashboard/QuickActions";
+import { useUserSession } from "@/hooks/useUserSession";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Track user session for manager dashboard
+  useUserSession();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(

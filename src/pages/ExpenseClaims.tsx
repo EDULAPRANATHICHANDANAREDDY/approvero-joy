@@ -223,7 +223,15 @@ const ExpenseClaims = () => {
             )}
 
             {claims.length === 0 && !loading && (
-              <div className="text-center py-8 text-muted-foreground">No expense claims yet</div>
+              <div className="text-center py-12 bg-muted/30 rounded-lg border border-dashed">
+                <DollarSign className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No requests submitted yet</h3>
+                <p className="text-muted-foreground mb-4">You haven't submitted any expense claims.</p>
+                <Button onClick={() => setShowNewRequest(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Your First Claim
+                </Button>
+              </div>
             )}
           </main>
         </div>

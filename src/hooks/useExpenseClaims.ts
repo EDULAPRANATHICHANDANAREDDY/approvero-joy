@@ -55,16 +55,31 @@ const sendApprovalEmail = async (
   }
 };
 
+const MANAGER_EMAIL = "edulapranathi@gmail.com";
+
 export function useExpenseClaims() {
   const [claims, setClaims] = useState<ExpenseClaim[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   const fetchClaims = async () => {
-    const { data, error } = await supabase
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    // Manager sees all claims, regular users see only their own
+    let query = supabase
       .from("expense_claims")
       .select("*")
       .order("created_at", { ascending: false });
+
+    if (user.email !== MANAGER_EMAIL) {
+      query = query.eq("user_id", user.id);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       toast({ title: "Error", description: "Failed to fetch expense claims", variant: "destructive" });
