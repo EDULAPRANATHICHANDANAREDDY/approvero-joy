@@ -8,7 +8,9 @@ import {
   Settings,
   LogOut,
   ChevronLeft,
-  Shield
+  Shield,
+  BarChart3,
+  FileText
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +37,7 @@ import { usePendingCounts } from "@/hooks/usePendingCounts";
 
 const adminItems = [
   { title: "Users", url: "/users", icon: Users },
+  { title: "Audit Log", url: "/audit-log", icon: FileText },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
@@ -57,13 +60,26 @@ export function AppSidebar() {
 
   const mainItems = [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, badge: 0 },
-    ...(isManager ? [{ title: "Manager Dashboard", url: "/manager-dashboard", icon: Shield, badge: 0 }] : []),
+    ...(isManager ? [
+      { title: "Manager Dashboard", url: "/manager-dashboard", icon: Shield, badge: 0 },
+      { title: "Analytics", url: "/analytics", icon: BarChart3, badge: 0 }
+    ] : []),
     { title: "Leave Requests", url: "/leave-requests", icon: Calendar, badge: counts.leave },
     { title: "Expense Claims", url: "/expense-claims", icon: DollarSign, badge: counts.expense },
     { title: "Asset Requests", url: "/asset-requests", icon: Package, badge: counts.asset },
   ];
 
   const handleLogout = async () => {
+    // Mark session as inactive before signing out
+    if (user) {
+      const today = new Date().toISOString().split('T')[0];
+      await supabase
+        .from("user_sessions")
+        .update({ is_active: false })
+        .eq("user_id", user.id)
+        .eq("session_date", today);
+    }
+
     const { error } = await supabase.auth.signOut();
     if (error) {
       toast({

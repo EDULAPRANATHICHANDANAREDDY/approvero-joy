@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+const MANAGER_EMAIL = "edulapranathi@gmail.com";
+
 export interface PendingCounts {
   leave: number;
   expense: number;
@@ -12,10 +14,29 @@ export function usePendingCounts() {
   const [loading, setLoading] = useState(true);
 
   const fetchCounts = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const isManager = user.email === MANAGER_EMAIL;
+
+    // Build queries - filter by user_id for non-managers
+    let leaveQuery = supabase.from("leave_requests").select("id", { count: "exact", head: true }).eq("status", "pending");
+    let expenseQuery = supabase.from("expense_claims").select("id", { count: "exact", head: true }).eq("status", "pending");
+    let assetQuery = supabase.from("asset_requests").select("id", { count: "exact", head: true }).eq("status", "pending");
+
+    if (!isManager) {
+      leaveQuery = leaveQuery.eq("user_id", user.id);
+      expenseQuery = expenseQuery.eq("user_id", user.id);
+      assetQuery = assetQuery.eq("user_id", user.id);
+    }
+
     const [leaveResult, expenseResult, assetResult] = await Promise.all([
-      supabase.from("leave_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
-      supabase.from("expense_claims").select("id", { count: "exact", head: true }).eq("status", "pending"),
-      supabase.from("asset_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
+      leaveQuery,
+      expenseQuery,
+      assetQuery,
     ]);
 
     setCounts({

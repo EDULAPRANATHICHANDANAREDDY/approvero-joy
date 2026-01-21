@@ -13,7 +13,12 @@ import ExpenseClaims from "./pages/ExpenseClaims";
 import AssetRequests from "./pages/AssetRequests";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
+import Analytics from "./pages/Analytics";
+import EmployeeProfile from "./pages/EmployeeProfile";
+import AuditLog from "./pages/AuditLog";
 import NotFound from "./pages/NotFound";
+import { AIChatBot } from "./components/chat/AIChatBot";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -33,9 +38,13 @@ const App = () => (
           <Route path="/asset-requests" element={<AssetRequests />} />
           <Route path="/users" element={<Users />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/employee/:id" element={<EmployeeProfile />} />
+          <Route path="/audit-log" element={<AuditLog />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <AIChatBot />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

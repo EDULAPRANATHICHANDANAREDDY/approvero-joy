@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+const MANAGER_EMAIL = "edulapranathi@gmail.com";
+
 export interface DashboardStats {
   pending: number;
   approvedThisWeek: number;
@@ -24,13 +26,31 @@ export function useDashboardStats() {
   const [loading, setLoading] = useState(true);
 
   const fetchStats = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const isManager = user.email === MANAGER_EMAIL;
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
 
+    // Build queries - filter by user_id for non-managers
+    let leaveQuery = supabase.from("leave_requests").select("status, created_at, user_id");
+    let expenseQuery = supabase.from("expense_claims").select("status, created_at, user_id");
+    let assetQuery = supabase.from("asset_requests").select("status, created_at, user_id");
+
+    if (!isManager) {
+      leaveQuery = leaveQuery.eq("user_id", user.id);
+      expenseQuery = expenseQuery.eq("user_id", user.id);
+      assetQuery = assetQuery.eq("user_id", user.id);
+    }
+
     const [leaveRes, expenseRes, assetRes] = await Promise.all([
-      supabase.from("leave_requests").select("status, created_at"),
-      supabase.from("expense_claims").select("status, created_at"),
-      supabase.from("asset_requests").select("status, created_at")
+      leaveQuery,
+      expenseQuery,
+      assetQuery
     ]);
 
     const allRequests = [
