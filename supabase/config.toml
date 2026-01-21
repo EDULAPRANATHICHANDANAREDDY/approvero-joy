@@ -1,1 +1,7 @@
 project_id = "eubnybehsmwmtniwyqxa"
+
+[functions.approvex-chat]
+verify_jwt = false
+
+[functions.send-approval-email]
+verify_jwt = false
