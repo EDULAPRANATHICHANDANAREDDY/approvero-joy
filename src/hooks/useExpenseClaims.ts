@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { playSound } from "@/lib/sound-engine";
+import { generateDecisionSummary } from "@/hooks/useDecisionSummary";
 
 export interface ExpenseClaim {
   id: string;
@@ -61,6 +63,7 @@ export function useExpenseClaims() {
   const [claims, setClaims] = useState<ExpenseClaim[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const fetchClaims = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -84,9 +87,21 @@ export function useExpenseClaims() {
     if (error) {
       toast({ title: "Error", description: "Failed to fetch expense claims", variant: "destructive" });
     } else {
-      setClaims((data as ExpenseClaim[]) || []);
+      const next = (data as ExpenseClaim[]) || [];
+      if (hasLoadedOnce) {
+        const prevMap = new Map(claims.map(c => [c.id, c]));
+        for (const c of next) {
+          const prev = prevMap.get(c.id);
+          const becameApproved = prev?.status === "pending" && c.status === "approved";
+          const becameRejected = prev?.status === "pending" && c.status === "rejected";
+          if (becameApproved) void playSound("approve");
+          if (becameRejected) void playSound("reject");
+        }
+      }
+      setClaims(next);
     }
     setLoading(false);
+    if (!hasLoadedOnce) setHasLoadedOnce(true);
   };
 
   useEffect(() => {
@@ -168,7 +183,26 @@ export function useExpenseClaims() {
     }
 
     if (user && updates.status && claimToUpdate) {
-      await logActivity(user.id, updates.status, "expense", id);
+      const decisionSummary =
+        updates.status === "approved" || updates.status === "rejected"
+          ? await generateDecisionSummary({
+              requestType: "expense",
+              status: updates.status,
+              managerComment: (updates as any).manager_comment ?? null,
+              request: {
+                title: claimToUpdate.title,
+                amount: claimToUpdate.amount,
+                category: claimToUpdate.category,
+                policy_warning: claimToUpdate.policy_warning,
+                urgency: claimToUpdate.urgency,
+              },
+            })
+          : null;
+
+      await logActivity(user.id, updates.status, "expense", id, decisionSummary ? { decision_summary: decisionSummary } : undefined);
+
+      if (updates.status === "approved") void playSound("approve");
+      if (updates.status === "rejected") void playSound("reject");
       
       // Send email notification
       const { data: profile } = await supabase
@@ -199,11 +233,14 @@ export function useExpenseClaims() {
   return { claims, loading, createClaim, updateClaim, refetch: fetchClaims };
 }
 
-async function logActivity(userId: string, action: string, requestType: string, requestId: string) {
-  await supabase.from("activity_log").insert({
-    user_id: userId,
-    action,
-    request_type: requestType,
-    request_id: requestId
-  });
+async function logActivity(userId: string, action: string, requestType: string, requestId: string, details?: Record<string, unknown>) {
+  await supabase.from("activity_log").insert([
+    {
+      user_id: userId,
+      action,
+      request_type: requestType,
+      request_id: requestId,
+      details: (details ?? null) as any,
+    },
+  ]);
 }
