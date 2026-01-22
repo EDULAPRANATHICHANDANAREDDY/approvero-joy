@@ -60,17 +60,22 @@ const AuditLog = () => {
 
       if (error) throw error;
 
-      // Fetch user emails
+      // Fetch user emails from profiles
       const userIds = [...new Set((data || []).map(log => log.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("user_id, email")
-        .in("user_id", userIds);
+        .select("user_id, email, full_name");
 
-      const logsWithEmail = (data || []).map(log => ({
-        ...log,
-        user_email: profiles?.find(p => p.user_id === log.user_id)?.email || "Unknown"
-      }));
+      // Create a map for quick lookup
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      const logsWithEmail = (data || []).map(log => {
+        const profile = profileMap.get(log.user_id);
+        return {
+          ...log,
+          user_email: profile?.email || profile?.full_name || "Unknown"
+        };
+      });
 
       setLogs(logsWithEmail);
       setFilteredLogs(logsWithEmail);

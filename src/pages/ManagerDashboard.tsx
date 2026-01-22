@@ -5,11 +5,11 @@ import { User } from "@supabase/supabase-js";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { DashboardHeader } from "@/components/layout/DashboardHeader";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { LoggedInUsersTable } from "@/components/manager/LoggedInUsersTable";
-import { LoggedInStatsCards } from "@/components/manager/LoggedInStatsCards";
+import { TeamMembersTable } from "@/components/manager/TeamMembersTable";
+import { TeamStatsCards } from "@/components/manager/TeamStatsCards";
 import { LeaveSummaryCards } from "@/components/manager/LeaveSummaryCards";
 import { LeaveTypeBreakdown } from "@/components/manager/LeaveTypeBreakdown";
-import { useLoggedInUsers } from "@/hooks/useLoggedInUsers";
+import { useAllTeamMembers } from "@/hooks/useAllTeamMembers";
 import { useTeamLeaveStatus } from "@/hooks/useTeamLeaveStatus";
 import { format } from "date-fns";
 import { CalendarDays, Shield, Filter } from "lucide-react";
@@ -24,7 +24,7 @@ const ManagerDashboard = () => {
   const [monthlyUsed, setMonthlyUsed] = useState(0);
   const [yearlyUsed, setYearlyUsed] = useState(0);
 
-  const { users: loggedInUsers, stats: loggedInStats, loading: loggedInLoading } = useLoggedInUsers();
+  const { members, stats, loading: membersLoading } = useAllTeamMembers();
   const { employeeStatuses, teamStats, loading: teamLoading } = useTeamLeaveStatus();
 
   useEffect(() => {
@@ -106,9 +106,10 @@ const ManagerDashboard = () => {
     );
   }
 
-  // Filter logged in users by status
-  const workingUsers = loggedInUsers.filter(u => !u.is_on_leave);
-  const onLeaveUsers = loggedInUsers.filter(u => u.is_on_leave);
+  // Filter members by status
+  const workingMembers = members.filter(m => m.status === "working");
+  const onLeaveMembers = members.filter(m => m.status === "on_leave");
+  const inactiveMembers = members.filter(m => m.status === "inactive");
 
   return (
     <SidebarProvider>
@@ -135,10 +136,10 @@ const ManagerDashboard = () => {
               </div>
             </div>
 
-            {/* Logged In Stats */}
+            {/* Team Stats */}
             <section className="mb-6">
-              <h2 className="text-lg font-semibold mb-4">Today's Login Status</h2>
-              <LoggedInStatsCards stats={loggedInStats} loading={loggedInLoading} />
+              <h2 className="text-lg font-semibold mb-4">Team Overview</h2>
+              <TeamStatsCards stats={stats} loading={membersLoading} />
             </section>
 
             {/* Leave Summary Cards */}
@@ -158,36 +159,43 @@ const ManagerDashboard = () => {
               <LeaveTypeBreakdown employees={employeeStatuses} />
             </section>
 
-            {/* Logged In Users Table with Filters */}
+            {/* Team Members Table with Filters */}
             <section>
               <div className="flex items-center gap-2 mb-4">
                 <Filter className="h-5 w-5 text-muted-foreground" />
-                <h2 className="text-lg font-semibold">Currently Logged In Users</h2>
+                <h2 className="text-lg font-semibold">All Team Members</h2>
               </div>
               
               <Tabs defaultValue="all" className="w-full">
                 <TabsList className="mb-4">
                   <TabsTrigger value="all">
-                    All ({loggedInUsers.length})
+                    All ({members.length})
                   </TabsTrigger>
                   <TabsTrigger value="working">
-                    Working ({workingUsers.length})
+                    Working ({workingMembers.length})
                   </TabsTrigger>
                   <TabsTrigger value="on_leave">
-                    On Leave ({onLeaveUsers.length})
+                    On Leave ({onLeaveMembers.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="inactive">
+                    Inactive ({inactiveMembers.length})
                   </TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="all">
-                  <LoggedInUsersTable users={loggedInUsers} loading={loggedInLoading} />
+                  <TeamMembersTable members={members} loading={membersLoading} filter="all" />
                 </TabsContent>
                 
                 <TabsContent value="working">
-                  <LoggedInUsersTable users={workingUsers} loading={loggedInLoading} />
+                  <TeamMembersTable members={members} loading={membersLoading} filter="working" />
                 </TabsContent>
                 
                 <TabsContent value="on_leave">
-                  <LoggedInUsersTable users={onLeaveUsers} loading={loggedInLoading} />
+                  <TeamMembersTable members={members} loading={membersLoading} filter="on_leave" />
+                </TabsContent>
+
+                <TabsContent value="inactive">
+                  <TeamMembersTable members={members} loading={membersLoading} filter="inactive" />
                 </TabsContent>
               </Tabs>
             </section>
