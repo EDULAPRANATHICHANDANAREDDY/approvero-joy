@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { playSound } from "@/lib/sound-engine";
+import { generateDecisionSummary } from "@/hooks/useDecisionSummary";
 
 export interface LeaveRequest {
   id: string;
@@ -51,6 +53,7 @@ export function useLeaveRequests() {
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const fetchRequests = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -74,9 +77,22 @@ export function useLeaveRequests() {
     if (error) {
       toast({ title: "Error", description: "Failed to fetch leave requests", variant: "destructive" });
     } else {
-      setRequests((data as LeaveRequest[]) || []);
+      const next = (data as LeaveRequest[]) || [];
+      // Sound for employees when their request gets approved/rejected (not on initial load)
+      if (hasLoadedOnce) {
+        const prevMap = new Map(requests.map(r => [r.id, r]));
+        for (const r of next) {
+          const prev = prevMap.get(r.id);
+          const becameApproved = prev?.status === "pending" && r.status === "approved";
+          const becameRejected = prev?.status === "pending" && r.status === "rejected";
+          if (becameApproved) void playSound("approve");
+          if (becameRejected) void playSound("reject");
+        }
+      }
+      setRequests(next);
     }
     setLoading(false);
+    if (!hasLoadedOnce) setHasLoadedOnce(true);
   };
 
   useEffect(() => {
@@ -149,7 +165,27 @@ export function useLeaveRequests() {
     }
 
     if (user && updates.status && requestToUpdate) {
-      await logActivity(user.id, updates.status, "leave", id);
+      const decisionSummary =
+        updates.status === "approved" || updates.status === "rejected"
+          ? await generateDecisionSummary({
+              requestType: "leave",
+              status: updates.status,
+              managerComment: (updates as any).manager_comment ?? null,
+              request: {
+                leave_type: requestToUpdate.leave_type,
+                start_date: requestToUpdate.start_date,
+                end_date: requestToUpdate.end_date,
+                days: requestToUpdate.days,
+                urgency: requestToUpdate.urgency,
+              },
+            })
+          : null;
+
+      await logActivity(user.id, updates.status, "leave", id, decisionSummary ? { decision_summary: decisionSummary } : undefined);
+
+      // Sound for manager action (user gesture)
+      if (updates.status === "approved") void playSound("approve");
+      if (updates.status === "rejected") void playSound("reject");
       
       // Send email notification
       const { data: profile } = await supabase
@@ -180,11 +216,14 @@ export function useLeaveRequests() {
   return { requests, loading, createRequest, updateRequest, refetch: fetchRequests };
 }
 
-async function logActivity(userId: string, action: string, requestType: string, requestId: string) {
-  await supabase.from("activity_log").insert({
-    user_id: userId,
-    action,
-    request_type: requestType,
-    request_id: requestId
-  });
+async function logActivity(userId: string, action: string, requestType: string, requestId: string, details?: Record<string, unknown>) {
+  await supabase.from("activity_log").insert([
+    {
+      user_id: userId,
+      action,
+      request_type: requestType,
+      request_id: requestId,
+      details: (details ?? null) as any,
+    },
+  ]);
 }

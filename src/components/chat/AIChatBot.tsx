@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { installSoundAutoplayUnlock } from "@/lib/sound-engine";
 
 interface Message {
   role: "user" | "assistant";
@@ -33,6 +34,7 @@ export function AIChatBot() {
   const { toast } = useToast();
 
   useEffect(() => {
+    installSoundAutoplayUnlock();
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
