@@ -69,13 +69,16 @@ const AuditLog = () => {
       // Create a map for quick lookup
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
 
-      const logsWithEmail = (data || []).map(log => {
-        const profile = profileMap.get(log.user_id);
-        return {
-          ...log,
-          user_email: profile?.email || profile?.full_name || "Unknown"
-        };
-      });
+      // Map logs with user info and filter out entries without valid user profiles
+      const logsWithEmail = (data || [])
+        .map(log => {
+          const profile = profileMap.get(log.user_id);
+          return {
+            ...log,
+            user_email: profile?.full_name || profile?.email || null
+          };
+        })
+        .filter(log => log.user_email !== null) as AuditLogEntry[];
 
       setLogs(logsWithEmail);
       setFilteredLogs(logsWithEmail);
