@@ -35,9 +35,10 @@ import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { usePendingCounts } from "@/hooks/usePendingCounts";
 
-const adminItems = [
+// Admin items will be filtered based on manager status
+const getAdminItems = (isManager: boolean) => [
   { title: "Users", url: "/users", icon: Users },
-  { title: "Audit Log", url: "/audit-log", icon: FileText },
+  ...(isManager ? [{ title: "Audit Log", url: "/audit-log", icon: FileText }] : []),
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
@@ -161,8 +162,8 @@ export function AppSidebar() {
             Admin
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {adminItems.map((item) => (
+          <SidebarMenu>
+              {getAdminItems(isManager).map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     onClick={() => navigate(item.url)}
