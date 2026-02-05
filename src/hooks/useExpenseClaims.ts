@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { playSound } from "@/lib/sound-engine";
 import { generateDecisionSummary } from "@/hooks/useDecisionSummary";
+import { sendEnhancedNotification, notifyManagerOfNewRequest } from "@/lib/notification-utils";
 
 export interface ExpenseClaim {
   id: string;
@@ -142,6 +143,21 @@ export function useExpenseClaims() {
     }
 
     await logActivity(user.id, "submitted", "expense", data.id);
+    
+    // Get employee name for manager notification
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("user_id", user.id)
+      .single();
+
+    // Notify manager of new expense claim
+    await notifyManagerOfNewRequest({
+      requestType: "expense",
+      requestTitle: `${claim.title} ($${claim.amount.toFixed(2)})`,
+      employeeName: profile?.full_name || user.email || "Employee",
+    });
+
     toast({ title: "Success", description: "Expense claim submitted" });
     return data;
   };
@@ -204,6 +220,16 @@ export function useExpenseClaims() {
       if (updates.status === "approved") void playSound("approve");
       if (updates.status === "rejected") void playSound("reject");
       
+      // Send enhanced in-app notification to the employee
+      await sendEnhancedNotification({
+        userId: claimToUpdate.user_id,
+        requestType: "expense",
+        status: updates.status as "approved" | "rejected",
+        requestTitle: claimToUpdate.title,
+        managerComment: (updates as any).manager_comment ?? null,
+        expenseAmount: claimToUpdate.amount,
+      });
+
       // Send email notification
       const { data: profile } = await supabase
         .from("profiles")

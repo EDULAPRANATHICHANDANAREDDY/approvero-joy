@@ -3,18 +3,34 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+const SESSION_KEY = "approvex_session_active";
+
 const Index = () => {
   const navigate = useNavigate();
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const handleAuth = async () => {
+      // Check if this is a fresh browser session
+      const wasActive = sessionStorage.getItem(SESSION_KEY);
+      
+      if (!wasActive) {
+        // Fresh browser session - clear any persisted auth and show login
+        await supabase.auth.signOut();
+        sessionStorage.setItem(SESSION_KEY, "true");
+        setCheckingAuth(false);
+        return;
+      }
+
+      // Session exists - check if user is logged in
+      const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         navigate("/dashboard");
       }
       setCheckingAuth(false);
-    });
+    };
+
+    handleAuth();
   }, [navigate]);
 
   if (checkingAuth) {

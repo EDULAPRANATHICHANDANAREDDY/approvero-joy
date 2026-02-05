@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { playSound } from "@/lib/sound-engine";
 import { generateDecisionSummary } from "@/hooks/useDecisionSummary";
+import { sendEnhancedNotification, notifyManagerOfNewRequest } from "@/lib/notification-utils";
 
 export interface LeaveRequest {
   id: string;
@@ -124,6 +125,22 @@ export function useLeaveRequests() {
     }
 
     await logActivity(user.id, "submitted", "leave", data.id);
+    
+    // Get employee name for manager notification
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("user_id", user.id)
+      .single();
+
+    // Notify manager of new request
+    await notifyManagerOfNewRequest({
+      requestType: "leave",
+      requestTitle: `${request.leave_type} (${request.days} days)`,
+      employeeName: profile?.full_name || user.email || "Employee",
+      urgency: request.urgency,
+    });
+
     toast({ title: "Success", description: "Leave request submitted" });
     return data;
   };
@@ -187,6 +204,28 @@ export function useLeaveRequests() {
       if (updates.status === "approved") void playSound("approve");
       if (updates.status === "rejected") void playSound("reject");
       
+      // Get leave balance for notification
+      const { data: leaveBalances } = await supabase
+        .from("leave_balances")
+        .select("*")
+        .eq("user_id", requestToUpdate.user_id)
+        .eq("leave_type", requestToUpdate.leave_type)
+        .single();
+
+      // Send enhanced in-app notification to the employee
+      await sendEnhancedNotification({
+        userId: requestToUpdate.user_id,
+        requestType: "leave",
+        status: updates.status as "approved" | "rejected",
+        requestTitle: `${requestToUpdate.leave_type} (${requestToUpdate.days} days)`,
+        managerComment: (updates as any).manager_comment ?? null,
+        leaveBalance: leaveBalances ? {
+          leave_type: leaveBalances.leave_type,
+          remaining: leaveBalances.total_days - leaveBalances.used_days,
+          total: leaveBalances.total_days,
+        } : undefined,
+      });
+
       // Send email notification
       const { data: profile } = await supabase
         .from("profiles")

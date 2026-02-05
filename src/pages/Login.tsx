@@ -15,6 +15,9 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    // Mark session as active for session persistence check
+    sessionStorage.setItem("approvex_session_active", "true");
+    
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
