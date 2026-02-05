@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { playSound } from "@/lib/sound-engine";
 import { generateDecisionSummary } from "@/hooks/useDecisionSummary";
+import { sendEnhancedNotification, notifyManagerOfNewRequest } from "@/lib/notification-utils";
 
 export interface AssetRequest {
   id: string;
@@ -134,6 +135,24 @@ export function useAssetRequests() {
     }
 
     await logActivity(user.id, status === "approved" ? "auto-approved" : "submitted", "asset", data.id);
+    
+    // Get employee name for manager notification
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("user_id", user.id)
+      .single();
+
+    // Notify manager of new asset request (if not auto-approved)
+    if (status !== "approved") {
+      await notifyManagerOfNewRequest({
+        requestType: "asset",
+        requestTitle: request.title,
+        employeeName: profile?.full_name || user.email || "Employee",
+        urgency: request.urgency,
+      });
+    }
+
     toast({ 
       title: "Success", 
       description: status === "approved" ? "Asset request auto-approved (low cost)" : "Asset request submitted" 
@@ -199,6 +218,19 @@ export function useAssetRequests() {
       if (updates.status === "approved") void playSound("approve");
       if (updates.status === "rejected") void playSound("reject");
       
+      // Send enhanced in-app notification to the employee
+      await sendEnhancedNotification({
+        userId: requestToUpdate.user_id,
+        requestType: "asset",
+        status: updates.status as "approved" | "rejected",
+        requestTitle: requestToUpdate.title,
+        managerComment: (updates as any).manager_comment ?? null,
+        assetDetails: {
+          title: requestToUpdate.title,
+          category: requestToUpdate.category,
+        },
+      });
+
       // Send email notification
       const { data: profile } = await supabase
         .from("profiles")

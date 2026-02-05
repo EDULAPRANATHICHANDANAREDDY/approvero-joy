@@ -9,6 +9,8 @@ import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { PendingApprovalsCard } from "@/components/dashboard/PendingApprovalsCard";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { useUserSession } from "@/hooks/useUserSession";
+import { useHolidayNotifications } from "@/hooks/useHolidayNotifications";
+import { useLeaveBalanceAlerts } from "@/hooks/useLeaveBalanceAlerts";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -17,6 +19,12 @@ const Dashboard = () => {
   
   // Track user session for manager dashboard
   useUserSession();
+  
+  // Check for holiday notifications
+  useHolidayNotifications();
+  
+  // Check for leave balance alerts
+  useLeaveBalanceAlerts();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
