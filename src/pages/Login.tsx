@@ -19,9 +19,14 @@ const Login = () => {
     sessionStorage.setItem("approvex_session_active", "true");
     
     // Check if user is already logged in
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        navigate("/dashboard");
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .in("role", ["manager", "admin"]);
+        navigate(roles?.length ? "/manager-dashboard" : "/dashboard");
       }
     });
   }, [navigate]);
@@ -78,6 +83,13 @@ const Login = () => {
     // Track user session on login
     if (data.user) {
       await trackSession(data.user.id, data.user.email || email);
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.user.id)
+        .in("role", ["manager", "admin"]);
+      navigate(roles?.length ? "/manager-dashboard" : "/dashboard");
+      return;
     }
 
     toast.success("Logged in successfully!");
