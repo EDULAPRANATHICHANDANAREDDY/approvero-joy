@@ -36,8 +36,14 @@ const ManagerDashboard = () => {
         return;
       }
 
-      // Check if user is manager
-      if (session.user.email !== "edulapranathi@gmail.com") {
+      // Check the protected role assignment rather than trusting an email match.
+      const { data: roles, error: roleError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .in("role", ["manager", "admin"]);
+
+      if (roleError || !roles?.length) {
         toast({
           title: "Access Denied",
           description: "Only managers can access this dashboard",

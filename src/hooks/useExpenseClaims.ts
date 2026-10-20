@@ -174,7 +174,7 @@ export function useExpenseClaims() {
     // Get the claim details for email
     const claimToUpdate = claims.find(c => c.id === id);
 
-    const updateData: Record<string, unknown> = { ...updates };
+    const updateData: Partial<ExpenseClaim> = { ...updates };
     
     if (updates.status === "approved" || updates.status === "rejected") {
       updateData.approved_by = user?.id;
