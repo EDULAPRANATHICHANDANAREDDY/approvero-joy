@@ -55,7 +55,7 @@ export function useLeaveBalances() {
           lastYearReset.getFullYear() !== currentYear;
 
         if (needsMonthlyReset || needsYearlyReset) {
-          const updates: Record<string, unknown> = {};
+          const updates: Partial<LeaveBalance> = {};
           if (needsMonthlyReset) {
             updates.monthly_used_days = 0;
             updates.last_month_reset = now.toISOString();
@@ -127,7 +127,7 @@ export function useLeaveBalances() {
 
     if (!error && data) {
       // Calculate type-safe balances with defaults for new columns
-      const typedBalances: LeaveBalance[] = data.map((b: Record<string, unknown>) => ({
+      const typedBalances: LeaveBalance[] = data.map((b) => ({
         id: b.id as string,
         user_id: b.user_id as string,
         leave_type: b.leave_type as string,

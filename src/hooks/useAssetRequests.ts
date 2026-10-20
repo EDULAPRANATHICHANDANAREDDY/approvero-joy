@@ -172,7 +172,7 @@ export function useAssetRequests() {
     // Get the request details for email
     const requestToUpdate = requests.find(r => r.id === id);
 
-    const updateData: Record<string, unknown> = { ...updates };
+    const updateData: Partial<AssetRequest> = { ...updates };
     
     if (updates.status === "approved" || updates.status === "rejected") {
       updateData.approved_by = user?.id;
