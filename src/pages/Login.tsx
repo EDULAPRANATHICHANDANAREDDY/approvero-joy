@@ -131,6 +131,11 @@ const Login = () => {
                   required
                   className="h-11 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
                 />
+                <div className="flex justify-end">
+                  <Link to="/forgot-password" className="text-sm text-primary font-medium hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
               </div>
               <Button type="submit" className="w-full h-11 text-base font-medium" disabled={isLoading}>
                 {isLoading ? "Signing in..." : "Sign In"}
